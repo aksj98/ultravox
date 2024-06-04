@@ -33,7 +33,7 @@ INPUT_EXAMPLE = {"text": "Transcribe <|audio|>", "audio": b"\x00\x00" * 16000}
 OUTPUT_EXAMPLE = {"text": "Hello, world!"}
 
 
-class GazelleMlflowWrapper(mlflow.pyfunc.PythonModel):
+class UltravoxMlflowWrapper(mlflow.pyfunc.PythonModel):
     def predict(self, context, model_input):
         sample = datasets.VoiceSample.from_prompt_and_buf(
             model_input["text"], model_input["audio"]
@@ -224,11 +224,7 @@ def main() -> None:
     # Set up the data loader
     data_collator = datasets.DataCollatorForSeq2SeqWithAudio(tokenizer=text_tokenizer)
 
-    # Training loop
-    logging.info("Starting training...")
     logging.info(f"Config Params: {args}")
-    t_start = datetime.now()
-    logging.info(f"start time: {t_start}")
 
     trainer = transformers.Seq2SeqTrainer(
         model,
@@ -272,14 +268,24 @@ def main() -> None:
             # fsdp_transformer_layer_cls_to_wrap='LlamaDecoderLayer',
         ),
     )
-    trainer.train()
-    trainer.save_model(args.output_dir)
+
+    if args.do_train:
+        # Training loop
+        logging.info("Starting training...")
+        t_start = datetime.now()
+        logging.info(f"start time: {t_start}")
+        trainer.train()
+        trainer.save_model(args.output_dir)
+        t_end = datetime.now()
+        logging.info(f"end time: {t_end}")
+        logging.info(f"elapsed: {t_end - t_start}")
+
     if "mlflow" in args.report_logs_to and is_master:
         signature = mlflow.models.signature.infer_signature(
             INPUT_EXAMPLE, OUTPUT_EXAMPLE
         )
         model_info = mlflow.pyfunc.log_model(
-            python_model=GazelleMlflowWrapper(),
+            python_model=UltravoxMlflowWrapper(),
             artifact_path="model",
             pip_requirements="requirements.txt",
             registered_model_name="ultravox",
@@ -288,30 +294,27 @@ def main() -> None:
         )
         logging.info(f"Model logged to MLflow: {model_info.model_uri}")
 
-    t_end = datetime.now()
-    logging.info(f"end time: {t_end}")
-    logging.info(f"elapsed: {t_end - t_start}")
-
-    # Merge LoRA weights for better inference performance.
-    # Note: this is irreversible and changes model saving format
-    model.merge_and_unload()
-    inference = infer.LocalInference(
-        model=model,
-        processor=processor,
-        tokenizer=text_tokenizer,
-        device=args.device,
-        dtype=dtype,
-    )
-    metrics = evaluation.evaluate(
-        inference,
-        data_dir=args.data_dir,
-        num_procs=args.eval_num_procs,
-        num_samples=args.eval_num_samples,
-        max_new_tokens=args.eval_max_new_tokens,
-        verbose=True,
-    )
-    if is_master:
-        trainer.log(metrics)
+    if args.do_eval:
+        # Merge LoRA weights for better inference performance.
+        # Note: this is irreversible and changes model saving format
+        model.merge_and_unload()
+        inference = infer.LocalInference(
+            model=model,
+            processor=processor,
+            tokenizer=text_tokenizer,
+            device=args.device,
+            dtype=dtype,
+        )
+        metrics = evaluation.evaluate(
+            inference,
+            data_dir=args.data_dir,
+            num_procs=args.eval_num_procs,
+            num_samples=args.eval_num_samples,
+            max_new_tokens=args.eval_max_new_tokens,
+            verbose=True,
+        )
+        if is_master:
+            trainer.log(metrics)
 
 
 if __name__ == "__main__":

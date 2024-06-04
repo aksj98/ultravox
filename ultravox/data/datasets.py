@@ -440,6 +440,20 @@ class BoolQInputDataset(BoolQDataset):
         return self._get_transcribe_sample(idx, row, tcol="question")
 
 
+class BoolQWithPassageDataset(BoolQDataset):
+    def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
+        messages = [
+            {
+                "role": "user",
+                "content": f"{row['passage']}\nQuestion: {row['question']}.\nRespond with a single True or False.",
+            },
+            {"role": "assistant", "content": row["answer"]},
+        ]
+        return VoiceSample(
+            messages, self._get_audio(row), audio_transcript=row["question"]
+        )
+
+
 class LibriSpeechDataset(VoiceDataset):
     """
     LibriSpeech is a corpus of approximately 1000 hours of 16kHz read
@@ -560,6 +574,7 @@ def create_dataset(name: str, args: VoiceDatasetArgs) -> data.IterableDataset:
         "anyinstruct_out": AnyInstructOutputDataset,
         "boolq": BoolQDataset,
         "boolq_in": BoolQInputDataset,
+        "boolq_passage": BoolQWithPassageDataset,
         "gigaspeech": GigaSpeechDataset,
         "librispeech": LibriSpeechDataset,
         "voxpopuli": VoxPopuliDataset,
