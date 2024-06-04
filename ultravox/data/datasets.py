@@ -445,7 +445,7 @@ class BoolQWithPassageDataset(BoolQDataset):
         messages = [
             {
                 "role": "user",
-                "content": f"{row['passage']}\nQuestion: {row['question']}.\nRespond with a single True or False.",
+                "content": f"{row['passage']}\nQuestion: <|audio|>.\nRespond with a single True or False.",
             },
             {"role": "assistant", "content": row["answer"]},
         ]
