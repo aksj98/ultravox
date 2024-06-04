@@ -447,7 +447,7 @@ class BoolQWithPassageDataset(BoolQDataset):
                 "role": "user",
                 "content": f"{row['passage']}\nQuestion: <|audio|>.\nRespond with a single True or False.",
             },
-            {"role": "assistant", "content": row["answer"]},
+            {"role": "assistant", "content": "True" if row["answer"] else "False"},
         ]
         return VoiceSample(
             messages, self._get_audio(row), audio_transcript=row["question"]
