@@ -462,7 +462,11 @@ class BoolQWithPassageDataset(BoolQDataset):
             {
                 "role": "user",
                 # "content": f"{row['passage']}\nQuestion: <|audio|>.\nLet's think step by step and then respond with a single True or False on the last line.",
-                "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
+                # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
+                # "content": f"{row['passage']}\nListen to <|audio|> and provide a True/False answer.",
+                # "content": f"Listen to <|audio|> and provide a True/False answer.",
+                "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with True/False.",
+                # "content": f"Question: <|audio|>\nRespond with a single True or False.",
             },
             {"role": "assistant", "content": "True" if row["answer"] else "False"},
         ]
