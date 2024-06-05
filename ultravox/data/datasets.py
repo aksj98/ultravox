@@ -420,11 +420,27 @@ class AnyInstructOutputDataset(AnyInstructDataset):
 
 class BoolQDataset(VoiceDataset):
     def __init__(self, args: VoiceDatasetArgs) -> None:
+        VAL_SAMPLES = 1024
         assert (
-            args.split == DatasetSplit.VALIDATION
-        ), f"BoolQ is only for validation, but got split={args.split}"
+            args.split == DatasetSplit.VALIDATION or not args.use_mds
+        ), f"BoolQ is only supported for validation with MDS, but got split={args.split}"
         super().__init__(args)
+
+        do_shuffle_after = False
+        if args.use_mds is False and args.shuffle:
+            do_shuffle_after = True
+            args.shuffle = False
+
         dataset = self._load_audio_dataset("fixie-ai/boolq-audio", split="train")
+
+        if isinstance(dataset, datasets.IterableDataset):
+            if args.split == DatasetSplit.VALIDATION:
+                dataset = dataset.take(VAL_SAMPLES)
+            else:
+                dataset = dataset.skip(VAL_SAMPLES)
+            if do_shuffle_after:
+                dataset = dataset.shuffle(seed=args.shuffle_seed)
+
         self._init_dataset(dataset)
 
     def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
@@ -445,7 +461,8 @@ class BoolQWithPassageDataset(BoolQDataset):
         messages = [
             {
                 "role": "user",
-                "content": f"{row['passage']}\nQuestion: <|audio|>.\nRespond with a single True or False.",
+                # "content": f"{row['passage']}\nQuestion: <|audio|>.\nLet's think step by step and then respond with a single True or False on the last line.",
+                "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
             },
             {"role": "assistant", "content": "True" if row["answer"] else "False"},
         ]
