@@ -73,9 +73,10 @@ def evaluate(
     )
 
     for ds_name, metric in [
-        # ("boolq_in", "asr"),
+        ("boolq_in", "asr"),
+        ("boolq", "boolq"),
         ("boolq_passage", "binary"),
-        # ("anyinstruct", "instruct"),
+        ("anyinstruct", "instruct"),
     ]:
         ds = datasets.Range(datasets.create_dataset(ds_name, ds_args), num_samples)
 
