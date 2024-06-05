@@ -431,15 +431,18 @@ class BoolQDataset(VoiceDataset):
             do_shuffle_after = True
             args.shuffle = False
 
-        dataset = self._load_audio_dataset("fixie-ai/boolq-audio", split="train")
+        dataset = self._load_audio_dataset(
+            "fixie-ai/boolq-audio", split="train", streaming=False
+        )
 
-        if isinstance(dataset, datasets.IterableDataset):
+        if isinstance(dataset, datasets.Dataset):
             if args.split == DatasetSplit.VALIDATION:
-                dataset = dataset.take(VAL_SAMPLES)
+                dataset = dataset.select(range(VAL_SAMPLES))
             else:
-                dataset = dataset.skip(VAL_SAMPLES)
+                dataset = dataset.select(range(VAL_SAMPLES, dataset.num_rows))
             if do_shuffle_after:
                 dataset = dataset.shuffle(seed=args.shuffle_seed)
+            dataset = dataset.to_iterable_dataset(num_shards=16)
 
         self._init_dataset(dataset)
 
