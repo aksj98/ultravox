@@ -420,30 +420,10 @@ class AnyInstructOutputDataset(AnyInstructDataset):
 
 class BoolQDataset(VoiceDataset):
     def __init__(self, args: VoiceDatasetArgs) -> None:
-        VAL_SAMPLES = 1024
-        assert (
-            args.split == DatasetSplit.VALIDATION or not args.use_mds
-        ), f"BoolQ is only supported for validation with MDS, but got split={args.split}"
         super().__init__(args)
-
-        do_shuffle_after = False
-        if args.use_mds is False and args.shuffle:
-            do_shuffle_after = True
-            args.shuffle = False
-
         dataset = self._load_audio_dataset(
-            "fixie-ai/boolq-audio", split="train", streaming=False
+            "fixie-ai/boolq-audio", split=args.split.value
         )
-
-        if isinstance(dataset, datasets.Dataset):
-            if args.split == DatasetSplit.VALIDATION:
-                dataset = dataset.select(range(VAL_SAMPLES))
-            else:
-                dataset = dataset.select(range(VAL_SAMPLES, dataset.num_rows))
-            if do_shuffle_after:
-                dataset = dataset.shuffle(seed=args.shuffle_seed)
-            dataset = dataset.to_iterable_dataset(num_shards=16)
-
         self._init_dataset(dataset)
 
     def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
@@ -462,14 +442,15 @@ class BoolQInputDataset(BoolQDataset):
 class BoolQWithPassageDataset(BoolQDataset):
     def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
         messages = [
+            # {"role": "system", "content": f"{row['passage']}"},
             {
                 "role": "user",
                 # "content": f"{row['passage']}\nQuestion: <|audio|>.\nLet's think step by step and then respond with a single True or False on the last line.",
                 # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
                 # "content": f"{row['passage']}\nListen to <|audio|> and provide a True/False answer.",
                 # "content": f"Listen to <|audio|> and provide a True/False answer.",
-                "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with True/False.",
-                # "content": f"Question: <|audio|>\nRespond with a single True or False.",
+                # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
+                "content": f"Question: <|audio|>\nRespond with a single True or False.",
             },
             {"role": "assistant", "content": "True" if row["answer"] else "False"},
         ]
