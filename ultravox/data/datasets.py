@@ -476,6 +476,7 @@ class BoolQInputDataset(BoolQDataset):
 
 class BoolQWithPassageDataset(BoolQDataset):
     def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
+        answer = "True" if row["answer"] else "False"
         messages = [
             # {"role": "system", "content": f"{row['passage']}"},
             {
@@ -485,9 +486,13 @@ class BoolQWithPassageDataset(BoolQDataset):
                 # "content": f"{row['passage']}\nListen to <|audio|> and provide a True/False answer.",
                 # "content": f"Listen to <|audio|> and provide a True/False answer.",
                 # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
-                "content": f"Question: <|audio|>\nRespond with a single True or False.",
+                # "content": f"Question: <|audio|>\nRespond with a single True or False.",
+                "content": f"Passage: {row['passage']}\n\nQuestion: <|audio|>\n\nProvide a short explanation, then respond with True/False on the last line.",
             },
-            {"role": "assistant", "content": "True" if row["answer"] else "False"},
+            {
+                "role": "assistant",
+                "content": f"{row['explanation']}\nAnswer: {answer}",
+            },
         ]
         return VoiceSample(
             messages, self._get_audio(row), audio_transcript=row["question"]
