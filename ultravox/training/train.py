@@ -239,7 +239,7 @@ def main() -> None:
             optim=args.optimizer,
             num_train_epochs=args.num_epochs,
             max_steps=args.max_steps,
-            evaluation_strategy="steps",
+            evaluation_strategy="steps" if args.val_steps else "no",
             eval_steps=args.val_steps,
             save_strategy="steps",
             save_steps=args.save_steps,
@@ -274,6 +274,8 @@ def main() -> None:
         logging.info("Starting training...")
         t_start = datetime.now()
         logging.info(f"start time: {t_start}")
+        if args.val_steps:
+            trainer.evaluate()
         trainer.train()
         trainer.save_model(args.output_dir)
         t_end = datetime.now()

@@ -477,16 +477,10 @@ class BoolQInputDataset(BoolQDataset):
 class BoolQWithPassageDataset(BoolQDataset):
     def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
         answer = "True" if row["answer"] else "False"
+        # preamble = f"Passage: {row['passage']}\n\n" if self._args.include_context else ""
         messages = [
-            # {"role": "system", "content": f"{row['passage']}"},
             {
                 "role": "user",
-                # "content": f"{row['passage']}\nQuestion: <|audio|>.\nLet's think step by step and then respond with a single True or False on the last line.",
-                # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
-                # "content": f"{row['passage']}\nListen to <|audio|> and provide a True/False answer.",
-                # "content": f"Listen to <|audio|> and provide a True/False answer.",
-                # "content": f"{row['passage']}\nQuestion: <|audio|>\nRespond with a single True or False.",
-                # "content": f"Question: <|audio|>\nRespond with a single True or False.",
                 "content": f"Passage: {row['passage']}\n\nQuestion: <|audio|>\n\nProvide a short explanation, then respond with True/False on the last line.",
             },
             {
@@ -494,9 +488,31 @@ class BoolQWithPassageDataset(BoolQDataset):
                 "content": f"{row['explanation']}\nAnswer: {answer}",
             },
         ]
+
         return VoiceSample(
             messages, self._get_audio(row), audio_transcript=row["question"]
         )
+
+
+class ExpressoDataset(VoiceDataset):
+    def __init__(self, args: VoiceDatasetArgs) -> None:
+        super().__init__(args)
+        dataset = self._load_audio_dataset("fixie-ai/expresso", split=args.split.value)
+        self._init_dataset(dataset)
+
+    def _get_sample(self, idx: int, row: transformers.BatchFeature) -> VoiceSample:
+        messages = [
+            {
+                "role": "user",
+                "content": f"Continue the following sentence in a way that reflects a '{row['style']}' tone in a coherent style:\n{row['text']}",
+            },
+            {
+                "role": "assistant",
+                "content": f"{row['continuation']}",
+            },
+        ]
+
+        return VoiceSample(messages, self._get_audio(row), audio_transcript=row["text"])
 
 
 class LibriSpeechDataset(VoiceDataset):
@@ -620,6 +636,7 @@ def create_dataset(name: str, args: VoiceDatasetArgs) -> data.IterableDataset:
         "boolq": BoolQDataset,
         "boolq_in": BoolQInputDataset,
         "boolq_passage": BoolQWithPassageDataset,
+        "expresso": ExpressoDataset,
         "gigaspeech": GigaSpeechDataset,
         "librispeech": LibriSpeechDataset,
         "voxpopuli": VoxPopuliDataset,
