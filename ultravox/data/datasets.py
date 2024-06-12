@@ -504,7 +504,7 @@ class ExpressoDataset(VoiceDataset):
         messages = [
             {
                 "role": "user",
-                "content": f"Continue the following sentence in a way that reflects a '{row['style']}' tone in a coherent style:\n{row['text']}",
+                "content": "Continue the following sentence based on the conveyed emotional tone in a coherent style:\n<|audio|>",
             },
             {
                 "role": "assistant",
